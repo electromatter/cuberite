@@ -8,14 +8,14 @@
 #if defined(_WIN32)
 	#include <io.h>  // Needed for _isatty(), not available on Linux
 	#include <time.h>
-#elif defined(__linux) && !defined(ANDROID_NDK)
+#elif defined(__linux) && !defined(ANDROID)
 	#include <unistd.h>  // Needed for isatty() on Linux
-#elif defined(ANDROID_NDK)
+#elif defined(ANDROID)
 	#include <android/log.h>
 #endif
 
 
-#if defined(_WIN32) || (defined (__linux) && !defined(ANDROID_NDK))
+#if defined(_WIN32) || (defined (__linux) && !defined(ANDROID))
 	class cColouredConsoleListener
 		: public cLogger::cListener
 	{
@@ -107,7 +107,7 @@
 	
 	
 	
-#elif defined (__linux) && !defined(ANDROID_NDK)
+#elif defined (__linux) && !defined(ANDROID)
 
 
 
@@ -156,7 +156,7 @@
 	
 	
 	
-#elif defined(ANDROID_NDK)
+#elif defined(ANDROID)
 
 
 
@@ -274,7 +274,7 @@ cLogger::cListener * MakeConsoleListener(bool a_IsService)
 			return new cVanillaCPPConsoleListener;
 		}
 		
-	#elif defined (__linux) && !defined(ANDROID_NDK)
+	#elif defined (__linux) && !defined(ANDROID)
 		// TODO: lookup terminal in terminfo
 		if (isatty(fileno(stdout)))
 		{

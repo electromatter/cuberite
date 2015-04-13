@@ -8,10 +8,12 @@
 
 #include <random>
 
-#ifdef _WIN32
+#if defined _WIN32
 	#define thread_local static __declspec(thread)
 #elif defined __APPLE__
 	#define thread_local static __thread
+#elif defined ANDROID
+	#define thread_local
 #endif
 
 static unsigned int GetRandomSeed()
