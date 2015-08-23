@@ -365,7 +365,8 @@ if (NOT MSVC)
 
 	if (ANDROID)
 		# Android requires linkage of the Java Native Interface calls as well as libatomic (the latter probably caused by incomplete NDK Clang support)
-		target_link_libraries(${CMAKE_PROJECT_NAME} AndroidNative atomic)
+		SET (AndroidNativeLibrary -Wl,--whole-archive AndroidNative -Wl,--no-whole-archive)
+		target_link_libraries(${CMAKE_PROJECT_NAME} ${AndroidNativeLibrary} atomic)
 	endif()
 endif ()
 

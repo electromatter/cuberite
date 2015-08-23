@@ -103,9 +103,9 @@ if(${BUILD_UNSTABLE_TOOLS})
 endif()
 
 # The Android toolchains sets its own flags; interference is bad
+include(SetFlags.cmake)
 if (NOT ANDROID)
 	include(CheckCXXCompilerFlag)
-	include(SetFlags.cmake)
 	set_flags()
 	set_lib_flags()
 	enable_profile()

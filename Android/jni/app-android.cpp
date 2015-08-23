@@ -17,6 +17,7 @@
 
 #include "Root.h"
 #include "WebAdmin.h"
+#include "MemorySettingsRepository.h"
 
 #include <android/log.h>
 
@@ -43,7 +44,7 @@ public:
 
 	void Start()
 	{
-		m_Root.Start();
+		m_Root.Start(cpp14::make_unique<cMemorySettingsRepository>());
 	}
 
 	void Stop()
@@ -83,7 +84,7 @@ extern "C"
 	}
 
 	/* Called when program/activity is created */
-	JNIEXPORT void JNICALL Java_com_mcserver_MCServerActivity_NativeOnCreate(JNIEnv*  env, jobject thiz)
+	JNIEXPORT void JNICALL Java_org_mcserver_MCServerActivity_NativeOnCreate(JNIEnv*  env, jobject thiz)
 	{
 		g_CriticalSection.Lock();
 		g_CurrentJNIEnv = env;
@@ -96,7 +97,7 @@ extern "C"
 		cLogger::InitiateMultithreading();
 
 		// Initialize LibEvent:
-		cNetworkSingleton::Get();
+		cNetworkSingleton::Get().Initialise();
 
 		try
 		{
@@ -119,7 +120,7 @@ extern "C"
 
 
 
-	JNIEXPORT void JNICALL Java_com_mcserver_MCServerActivity_NativeCleanUp(JNIEnv*  env, jobject thiz)
+	JNIEXPORT void JNICALL Java_org_mcserver_MCServerActivity_NativeCleanUp(JNIEnv*  env, jobject thiz)
 	{
 		g_CriticalSection.Lock();
 		g_CurrentJNIEnv = env;
@@ -133,7 +134,7 @@ extern "C"
 
 
 
-	JNIEXPORT jboolean JNICALL Java_com_mcserver_MCServerActivity_NativeIsServerRunning(JNIEnv* env, jobject thiz)
+	JNIEXPORT jboolean JNICALL Java_org_mcserver_MCServerActivity_NativeIsServerRunning(JNIEnv* env, jobject thiz)
 	{
 		return !RootLauncher.IsStopped();
 	}
@@ -142,7 +143,7 @@ extern "C"
 
 
 
-	JNIEXPORT jint JNICALL Java_com_mcserver_MCServerActivity_NativeGetWebAdminPort(JNIEnv* env, jobject thiz)
+	JNIEXPORT jint JNICALL Java_org_mcserver_MCServerActivity_NativeGetWebAdminPort(JNIEnv* env, jobject thiz)
 	{
 		if (!RootLauncher.IsStopped() && (RootLauncher.GetInstance().GetWebAdmin() != nullptr))
 		{

@@ -95,7 +95,7 @@
     <target name="-pre-build">
       <exec executable="${cmake.dir}/cmake.exe" failonerror="true">
         <arg value="-DCMAKE_TOOLCHAIN_FILE=android.toolchain.cmake" />
-        <arg value="-DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-clang3.5" />
+        <arg value="-DANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-clang3.6" />
         <arg value="-DCMAKE_BUILD_TYPE=Debug" />
         <arg value="-DANDROID_ABI=&quot;armeabi&quot;" />
         <arg value="-G" />

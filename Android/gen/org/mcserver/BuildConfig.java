@@ -1,5 +1,5 @@
 /** Automatically generated file. DO NOT MODIFY */
-package com.mcserver;
+package org.mcserver;
 
 public final class BuildConfig {
     public final static boolean DEBUG = true;
