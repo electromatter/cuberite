@@ -79,7 +79,7 @@ static AString PrintAddress(SOCKET_ADDRESS & a_Addr)
 	return IP;
 }
 
-#elif !defined(ANDROID) // _WIN32
+#elif !defined(ANDROID)  // _WIN32
 
 static AString PrintAddress(ifaddrs * InterfaceAddress)
 {
@@ -111,7 +111,7 @@ static AString PrintAddress(ifaddrs * InterfaceAddress)
 	}
 }
 
-#endif  // else _WIN32
+#endif  // else !ANDROID
 
 
 
