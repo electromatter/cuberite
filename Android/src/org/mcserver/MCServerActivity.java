@@ -252,7 +252,7 @@ public class MCServerActivity extends Activity {
         switch( item.getItemId() )
         {
             case MENU_REINSTALL:
-                mInstaller.ShowPluginInstallDialog(true);
+                mInstaller.ShowFirstRunDialog();
                 return true;
         }
         return false;

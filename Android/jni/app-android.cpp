@@ -1,25 +1,14 @@
 #include "Globals.h"
 
 #include <jni.h>
-#include <sys/time.h>
-#include <time.h>
-#include <stdint.h>
+#include <android/log.h>
 
-#include <stdlib.h>
-#include <math.h>
-#include <float.h>
-#include <assert.h>
-
-#include "OSSupport/CriticalSection.h"
 #include "OSSupport/File.h"
 #include "OSSupport/NetworkSingleton.h"
-#include "ToJava.h"
 
 #include "Root.h"
 #include "WebAdmin.h"
 #include "MemorySettingsRepository.h"
-
-#include <android/log.h>
 
 #ifdef _WIN32 // For IntelliSense parsing
 typedef void jobject;
@@ -28,12 +17,6 @@ typedef bool jboolean;
 typedef void JavaVM;
 typedef void JNIEnv;
 #endif
-
-cCriticalSection g_CriticalSection;
-
-JNIEnv* g_CurrentJNIEnv = 0;
-jobject g_JavaThread = 0;
-JavaVM* g_JavaVM = 0;
 
 
 
@@ -79,18 +62,12 @@ extern "C"
 {
 	jint JNI_OnLoad(JavaVM* vm, void* reserved)
 	{
-		g_JavaVM = vm;
 		return JNI_VERSION_1_4;
 	}
 
 	/* Called when program/activity is created */
 	JNIEXPORT void JNICALL Java_org_mcserver_MCServerActivity_NativeOnCreate(JNIEnv*  env, jobject thiz)
 	{
-		g_CriticalSection.Lock();
-		g_CurrentJNIEnv = env;
-		g_JavaThread = thiz;
-		g_CriticalSection.Unlock();
-
 		cFile::CreateFolder(AString(FILE_IO_PREFIX) + "mcserver");
 
 		// Initialize logging subsystem:
@@ -116,32 +93,15 @@ extern "C"
 		cNetworkSingleton::Get().Terminate();
 	}
 
-
-
-
-
 	JNIEXPORT void JNICALL Java_org_mcserver_MCServerActivity_NativeCleanUp(JNIEnv*  env, jobject thiz)
 	{
-		g_CriticalSection.Lock();
-		g_CurrentJNIEnv = env;
-		g_JavaThread = thiz;
-		g_CriticalSection.Unlock();
-
 		RootLauncher.Stop();
 	}
-
-
-
-
 
 	JNIEXPORT jboolean JNICALL Java_org_mcserver_MCServerActivity_NativeIsServerRunning(JNIEnv* env, jobject thiz)
 	{
 		return !RootLauncher.IsStopped();
 	}
-
-
-
-
 
 	JNIEXPORT jint JNICALL Java_org_mcserver_MCServerActivity_NativeGetWebAdminPort(JNIEnv* env, jobject thiz)
 	{

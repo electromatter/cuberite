@@ -284,6 +284,8 @@ cLogger::cListener * MakeConsoleListener(bool a_IsService)
 		{
 			return new cVanillaCPPConsoleListener();
 		}
+	#elif defined(ANDROID)
+		return new cAndroidConsoleListener();
 	#else
 		return new cVanillaCPPConsoleListener();
 	#endif
