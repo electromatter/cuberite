@@ -102,7 +102,7 @@ if(${BUILD_UNSTABLE_TOOLS})
 	add_subdirectory(Tools/GeneratorPerformanceTest/)
 endif()
 
-# The Android toolchains sets its own flags; interference is bad
+# The Android toolchain sets its own flags; interference is bad
 include(SetFlags.cmake)
 if (NOT ANDROID)
 	include(CheckCXXCompilerFlag)
@@ -201,7 +201,7 @@ endif()
 # (PolarSSL also has test and example programs in their CMakeLists.txt, we don't want those)
 include(lib/polarssl.cmake EXCLUDE_FROM_ALL)
 
-# Add the Android subfolder to compilation if building for it - make sure again not to set Desktop flags
+# Android toolchain sets its own flags
 if (NOT ANDROID)
 	set_exe_flags()
 endif()

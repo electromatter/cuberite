@@ -300,7 +300,7 @@ cLogger::cListener * MakeConsoleListener(bool a_IsService)
 
 cFileListener::cFileListener(void)
 {
-	cFile::CreateFolder(FILE_IO_PREFIX + AString("logs"));
+	cFile::CreateFolder(FILE_IO_PREFIX "logs");
 	m_File.Open(
 		FILE_IO_PREFIX + Printf(
 			"logs/LOG_%d.txt",

@@ -106,10 +106,10 @@ void cRoot::Start(std::unique_ptr<cSettingsRepositoryInterface> a_OverridesRepo)
 	#endif
 
 	cLogger::cListener * consoleLogListener = MakeConsoleListener(m_RunAsService);
-	//cLogger::cListener * fileLogListener = new cFileListener();
+	cLogger::cListener * fileLogListener = new cFileListener();
 	cLogger::GetInstance().AttachListener(consoleLogListener);
-	//cLogger::GetInstance().AttachListener(fileLogListener);
-
+	cLogger::GetInstance().AttachListener(fileLogListener);
+	
 	LOG("--- Started Log ---");
 
 	#ifdef BUILD_ID
@@ -318,8 +318,8 @@ void cRoot::Start(std::unique_ptr<cSettingsRepositoryInterface> a_OverridesRepo)
 
 	cLogger::GetInstance().DetachListener(consoleLogListener);
 	delete consoleLogListener;
-	//cLogger::GetInstance().DetachListener(fileLogListener);
-	//delete fileLogListener;
+	cLogger::GetInstance().DetachListener(fileLogListener);
+	delete fileLogListener;
 }
 
 

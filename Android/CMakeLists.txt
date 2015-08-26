@@ -6,13 +6,8 @@ project(MCServer)
 add_definitions(-Dgetlocaledecpoint\(\)="'.'" -DEVENT__HAVE_PTHREADS)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14") # Add c++14 support here since we're not calling set_flags()
-set(CMAKE_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM} -j4") # Tell make.exe to use multithreading since Android builds call make through cmake (cmake --build .)
 
-add_library(AndroidNative
-	jni/app-android.cpp
-	jni/ToJava.cpp
-	jni/ToJava.h
-)
+add_library(AndroidNative jni/app-android.cpp)
 target_link_libraries(AndroidNative log dl)
 
 include_directories(
