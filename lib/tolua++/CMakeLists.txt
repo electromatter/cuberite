@@ -44,6 +44,7 @@ file(GLOB BIN_SOURCE
     "src/bin/*.c"
 )
 
+link_directories(${CMAKE_SOURCE_DIR}/../../Android/lua_native-prefix/src/lua_native-build/)
 add_executable(tolua ${BIN_SOURCE})
 add_library(tolualib ${LIB_SOURCE})
 target_link_libraries(tolualib lua)

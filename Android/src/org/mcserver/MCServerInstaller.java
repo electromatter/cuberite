@@ -123,7 +123,7 @@ class MCServerInstaller {
 	
 	private static void CopyAllFilesInFolder(AssetManager Manager, String Folder)
 	{
-		if ((Folder == "webkit/") || (Folder == "sounds/") || (Folder == "images/"))
+		if ((Folder == "webkit") || (Folder == "sounds") || (Folder == "images") || (Folder == "mcserver"))
 		{
 			// Random files are random :P
 			return;

@@ -20,7 +20,7 @@ endif()
 
 
 # Lua needs to be linked dynamically on Windows and statically on *nix, so that LuaRocks work
-if (WIN32)
+if (WIN32 AND NOT ANDROID_CROSSCOMPILE)
 	add_library(lua SHARED ${SOURCE})
 	set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/MCServer)
 
