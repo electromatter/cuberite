@@ -5,7 +5,7 @@ include(ExternalProject)
 externalproject_add(lua_native
 	SOURCE_DIR ../lib/lua
 	CMAKE_GENERATOR "Visual Studio 14 2015"
-	CMAKE_ARGS -D ANDROID_CROSSCOMPILE:BOOL=TRUE
+	CMAKE_ARGS -DANDROID_CROSSCOMPILE=TRUE
 	BUILD_COMMAND
 		${CMAKE_COMMAND} --build <BINARY_DIR> --config Release
 	INSTALL_COMMAND ""
@@ -42,3 +42,13 @@ include_directories(
 # Probably not the recommended method, but other ways don't seem to generate libraries in libs/armeabi
 set(CMAKE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/../")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../ ${CMAKE_CURRENT_BINARY_DIR}/MCServer)
+
+get_directory_property(BINDING_OUTPUTS DIRECTORY ${CMAKE_SOURCE_DIR}/src/Bindings DEFINITION BINDING_OUTPUTS)
+ADD_CUSTOM_COMMAND(
+		OUTPUT ${BINDING_OUTPUTS}
+
+		COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tolua_native-prefix/src/tolua_native-build/Release/tolua -L BindingsProcessor.lua -o  Bindings.cpp -H  Bindings.h AllToLua.pkg
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/Bindings
+)
+add_custom_target(BindingDependencies ALL DEPENDS ${BINDING_OUTPUTS})
+add_dependencies(AndroidNative BindingDependencies)
