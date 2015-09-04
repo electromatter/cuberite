@@ -289,7 +289,7 @@ void cNetherPortalScanner::OnDisabled(void)
 		Position.z += OutOffset;
 	}
 
-	LOGD("Placing player at {%f, %f, %f}", Position.x, Position.y, Position.z);
+	LOGD("Placing %s at {%f, %f, %f}", m_Entity->GetClass(), Position.x, Position.y, Position.z);
 	m_Entity->ScheduleMoveToWorld(m_World, Position, true);
 	delete this;
 }

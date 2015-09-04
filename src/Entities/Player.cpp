@@ -1637,9 +1637,8 @@ bool cPlayer::DoMoveToWorld(cWorld * a_World, bool a_ShouldSendRespawn, Vector3d
 	// Broadcast for other people that the player is gone.
 	GetWorld()->BroadcastDestroyEntity(*this);
 
-	// Remove player from the old world
-	SetWorldTravellingFrom(GetWorld());  // cChunk handles entity removal
-	GetWorld()->RemovePlayer(this, false);
+	// Remove player from the old world (removes from chunk as well)
+	GetWorld()->RemovePlayer(this);
 
 	SetPosition(a_NewPosition);
 
@@ -1647,15 +1646,6 @@ bool cPlayer::DoMoveToWorld(cWorld * a_World, bool a_ShouldSendRespawn, Vector3d
 	a_World->AddPlayer(this);
 	cWorld * OldWorld = cRoot::Get()->GetWorld(GetWorld()->GetName());  // Required for the hook HOOK_ENTITY_CHANGED_WORLD
 	SetWorld(a_World);  // Chunks may be streamed before cWorld::AddPlayer() sets the world to the new value
-
-	// Update the view distance.
-	m_ClientHandle->SetViewDistance(m_ClientHandle->GetRequestedViewDistance());
-
-	// Send current weather of target world to player
-	if (a_World->GetDimension() == dimOverworld)
-	{
-		m_ClientHandle->SendWeather(a_World->GetWeather());
-	}
 
 	// Broadcast the player into the new world.
 	a_World->BroadcastSpawnEntity(*this);

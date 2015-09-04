@@ -825,20 +825,6 @@ void cWorld::Tick(std::chrono::milliseconds a_Dt, std::chrono::milliseconds a_La
 		}
 	}
 
-	// Add entities waiting in the queue to be added:
-	{
-		cCSLock Lock(m_CSEntitiesToAdd);
-		for (cEntityList::iterator itr = m_EntitiesToAdd.begin(), end = m_EntitiesToAdd.end(); itr != end; ++itr)
-		{
-			(*itr)->SetWorld(this);
-			m_ChunkMap->AddEntity(*itr);
-		}
-		m_EntitiesToAdd.clear();
-	}
-
-	// Add players waiting in the queue to be added:
-	AddQueuedPlayers();
-
 	m_ChunkMap->Tick(a_Dt);
 	m_MapManager.TickMaps();
 
@@ -1185,16 +1171,16 @@ void cWorld::DoExplosionAt(double a_ExplosionSize, double a_BlockX, double a_Blo
 	BroadcastSoundEffect("random.explode", static_cast<double>(a_BlockX), static_cast<double>(a_BlockY), static_cast<double>(a_BlockZ), 1.0f, 0.6f);
 
 	{
-		cCSLock Lock(m_CSPlayers);
-		for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+		std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+		for (const auto & Player : m_Players)
 		{
-			cClientHandle * ch = (*itr)->GetClientHandle();
+			cClientHandle * ch = Player->GetClientHandle();
 			if (ch == nullptr)
 			{
 				continue;
 			}
 
-			Vector3d distance_explosion = (*itr)->GetPosition() - explosion_pos;
+			Vector3d distance_explosion = Player->GetPosition() - explosion_pos;
 			if (distance_explosion.SqrLength() < 4096.0)
 			{
 				double real_distance = std::max(0.004, distance_explosion.Length());
@@ -2084,10 +2070,10 @@ void cWorld::BroadcastBlockEntity(int a_BlockX, int a_BlockY, int a_BlockZ, cons
 
 void cWorld::BroadcastChat(const AString & a_Message, const cClientHandle * a_Exclude, eMessageType a_ChatPrefix)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2102,10 +2088,10 @@ void cWorld::BroadcastChat(const AString & a_Message, const cClientHandle * a_Ex
 
 void cWorld::BroadcastChat(const cCompositeChat & a_Message, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2228,10 +2214,10 @@ void cWorld::BroadcastEntityAnimation(const cEntity & a_Entity, char a_Animation
 
 void cWorld::BroadcastPlayerListAddPlayer(const cPlayer & a_Player, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2246,10 +2232,10 @@ void cWorld::BroadcastPlayerListAddPlayer(const cPlayer & a_Player, const cClien
 
 void cWorld::BroadcastPlayerListRemovePlayer(const cPlayer & a_Player, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2264,10 +2250,10 @@ void cWorld::BroadcastPlayerListRemovePlayer(const cPlayer & a_Player, const cCl
 
 void cWorld::BroadcastPlayerListUpdateGameMode(const cPlayer & a_Player, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2282,10 +2268,10 @@ void cWorld::BroadcastPlayerListUpdateGameMode(const cPlayer & a_Player, const c
 
 void cWorld::BroadcastPlayerListUpdatePing(const cPlayer & a_Player, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2300,10 +2286,10 @@ void cWorld::BroadcastPlayerListUpdatePing(const cPlayer & a_Player, const cClie
 
 void cWorld::BroadcastPlayerListUpdateDisplayName(const cPlayer & a_Player, const AString & a_CustomName, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2327,10 +2313,10 @@ void cWorld::BroadcastRemoveEntityEffect(const cEntity & a_Entity, int a_EffectI
 
 void cWorld::BroadcastScoreboardObjective(const AString & a_Name, const AString & a_DisplayName, Byte a_Mode)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2345,10 +2331,10 @@ void cWorld::BroadcastScoreboardObjective(const AString & a_Name, const AString 
 
 void cWorld::BroadcastScoreUpdate(const AString & a_Objective, const AString & a_Player, cObjective::Score a_Score, Byte a_Mode)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2363,10 +2349,10 @@ void cWorld::BroadcastScoreUpdate(const AString & a_Objective, const AString & a
 
 void cWorld::BroadcastDisplayObjective(const AString & a_Objective, cScoreboard::eDisplaySlot a_Display)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2408,10 +2394,10 @@ void cWorld::BroadcastSpawnEntity(cEntity & a_Entity, const cClientHandle * a_Ex
 
 void cWorld::BroadcastTeleportEntity(const cEntity & a_Entity, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2435,10 +2421,10 @@ void cWorld::BroadcastThunderbolt(int a_BlockX, int a_BlockY, int a_BlockZ, cons
 
 void cWorld::BroadcastTimeUpdate(const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2462,10 +2448,10 @@ void cWorld::BroadcastUseBed(const cEntity & a_Entity, int a_BlockX, int a_Block
 
 void cWorld::BroadcastWeather(eWeather a_Weather, const cClientHandle * a_Exclude)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch == a_Exclude) || (ch == nullptr) || !ch->IsLoggedIn() || ch->IsDestroyed())
 		{
 			continue;
@@ -2686,28 +2672,45 @@ void cWorld::CollectPickupsByPlayer(cPlayer & a_Player)
 
 void cWorld::AddPlayer(cPlayer * a_Player)
 {
-	cCSLock Lock(m_CSPlayersToAdd);
-	m_PlayersToAdd.push_back(a_Player);
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	m_Players.push_back(a_Player);
+	a_Player->SetWorld(this);
+
+	// Add to chunkmap, if not already there (Spawn vs MoveToWorld):
+	m_ChunkMap->AddEntityIfNotPresent(a_Player);
+
+	{
+		cCSLock Lock(m_CSClients);
+		cClientHandlePtr Client = a_Player->GetClientHandlePtr();
+		if (Client != nullptr)
+		{
+			m_Clients.push_back(Client);
+
+			Client->SendPlayerMoveLook();
+			Client->SendHealth();
+			Client->SendWholeInventory(*(a_Player->GetWindow()));
+
+			// Update the view distance.
+			Client->SetViewDistance(Client->GetRequestedViewDistance());
+
+			// Send current weather of target world to player
+			if (GetDimension() == dimOverworld)
+			{
+				Client->SendWeather(GetWeather());
+			}
+		}
+	}
 }
 
 
 
 
 
-void cWorld::RemovePlayer(cPlayer * a_Player, bool a_RemoveFromChunk)
+void cWorld::RemovePlayer(cPlayer * a_Player)
 {
-	if (a_RemoveFromChunk)
+	m_ChunkMap->RemoveEntity(a_Player);
 	{
-		// To prevent iterator invalidations when an entity goes through a portal and calls this function whilst being ticked by cChunk
-		// we should not change cChunk's entity list if asked not to
-		m_ChunkMap->RemoveEntity(a_Player);
-	}
-	{
-		cCSLock Lock(m_CSPlayersToAdd);
-		m_PlayersToAdd.remove(a_Player);
-	}
-	{
-		cCSLock Lock(m_CSPlayers);
+		std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
 		LOGD("Removing player %s from world \"%s\"", a_Player->GetName().c_str(), m_WorldName.c_str());
 		m_Players.remove(a_Player);
 	}
@@ -2730,11 +2733,10 @@ void cWorld::RemovePlayer(cPlayer * a_Player, bool a_RemoveFromChunk)
 bool cWorld::ForEachPlayer(cPlayerListCallback & a_Callback)
 {
 	// Calls the callback for each player in the list
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(), itr2 = itr; itr != m_Players.end(); itr = itr2)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		++itr2;
-		if (a_Callback.Item(*itr))
+		if (a_Callback.Item(Player))
 		{
 			return false;
 		}
@@ -2749,12 +2751,12 @@ bool cWorld::ForEachPlayer(cPlayerListCallback & a_Callback)
 bool cWorld::DoWithPlayer(const AString & a_PlayerName, cPlayerListCallback & a_Callback)
 {
 	// Calls the callback for the specified player in the list
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		if (NoCaseCompare((*itr)->GetName(), a_PlayerName) == 0)
+		if (NoCaseCompare(Player->GetName(), a_PlayerName) == 0)
 		{
-			a_Callback.Item(*itr);
+			a_Callback.Item(Player);
 			return true;
 		}
 	}  // for itr - m_Players[]
@@ -2771,24 +2773,26 @@ bool cWorld::FindAndDoWithPlayer(const AString & a_PlayerNameHint, cPlayerListCa
 	size_t BestRating = 0;
 	size_t NameLength = a_PlayerNameHint.length();
 
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
 	{
-		size_t Rating = RateCompareString (a_PlayerNameHint, (*itr)->GetName());
-		if (Rating >= BestRating)
+		std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+		for (const auto & Player : m_Players)
 		{
-			BestMatch = *itr;
-			BestRating = Rating;
-		}
-		if (Rating == NameLength)  // Perfect match
-		{
-			break;
-		}
-	}  // for itr - m_Players[]
+			size_t Rating = RateCompareString(a_PlayerNameHint, Player->GetName());
+			if (Rating >= BestRating)
+			{
+				BestMatch = Player;
+				BestRating = Rating;
+			}
+			if (Rating == NameLength)  // Perfect match
+			{
+				break;
+			}
+		}  // for itr - m_Players[]
 
-	if (BestMatch != nullptr)
-	{
-		return a_Callback.Item (BestMatch);
+		if (BestMatch != nullptr)
+		{
+			return a_Callback.Item(BestMatch);
+		}
 	}
 	return false;
 }
@@ -2799,12 +2803,12 @@ bool cWorld::FindAndDoWithPlayer(const AString & a_PlayerNameHint, cPlayerListCa
 
 bool cWorld::DoWithPlayerByUUID(const AString & a_PlayerUUID, cPlayerListCallback & a_Callback)
 {
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		if ((*itr)->GetUUID() == a_PlayerUUID)
+		if (Player->GetUUID() == a_PlayerUUID)
 		{
-			return a_Callback.Item(*itr);
+			return a_Callback.Item(Player);
 		}
 	}
 	return false;
@@ -2822,26 +2826,28 @@ cPlayer * cWorld::FindClosestPlayer(const Vector3d & a_Pos, float a_SightLimit, 
 	double ClosestDistance = a_SightLimit;
 	cPlayer * ClosestPlayer = nullptr;
 
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
 	{
-		Vector3f Pos = (*itr)->GetPosition();
-		double Distance = (Pos - a_Pos).Length();
-
-		if (Distance < ClosestDistance)
+		std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+		for (const auto & Player : m_Players)
 		{
-			if (a_CheckLineOfSight)
+			Vector3f Pos = Player->GetPosition();
+			double Distance = (Pos - a_Pos).Length();
+
+			if (Distance < ClosestDistance)
 			{
-				if (!LineOfSight.Trace(a_Pos, (Pos - a_Pos), static_cast<int>((Pos - a_Pos).Length())))
+				if (a_CheckLineOfSight)
+				{
+					if (!LineOfSight.Trace(a_Pos, (Pos - a_Pos), static_cast<int>((Pos - a_Pos).Length())))
+					{
+						ClosestDistance = Distance;
+						ClosestPlayer = Player;
+					}
+				}
+				else
 				{
 					ClosestDistance = Distance;
-					ClosestPlayer = *itr;
+					ClosestPlayer = Player;
 				}
-			}
-			else
-			{
-				ClosestDistance = Distance;
-				ClosestPlayer = *itr;
 			}
 		}
 	}
@@ -2855,13 +2861,13 @@ cPlayer * cWorld::FindClosestPlayer(const Vector3d & a_Pos, float a_SightLimit, 
 void cWorld::SendPlayerList(cPlayer * a_DestPlayer)
 {
 	// Sends the playerlist to a_DestPlayer
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+	std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+	for (const auto & Player : m_Players)
 	{
-		cClientHandle * ch = (*itr)->GetClientHandle();
+		cClientHandle * ch = Player->GetClientHandle();
 		if ((ch != nullptr) && !ch->IsDestroyed())
 		{
-			a_DestPlayer->GetClientHandle()->SendPlayerListAddPlayer(*(*itr));
+			a_DestPlayer->GetClientHandle()->SendPlayerListAddPlayer(*Player);
 		}
 	}
 }
@@ -2899,19 +2905,6 @@ bool cWorld::ForEachEntityInBox(const cBoundingBox & a_Box, cEntityCallback & a_
 
 bool cWorld::DoWithEntityByID(UInt32 a_UniqueID, cEntityCallback & a_Callback)
 {
-	// First check the entities-to-add:
-	{
-		cCSLock Lock(m_CSEntitiesToAdd);
-		for (auto & ent: m_EntitiesToAdd)
-		{
-			if (ent->GetUniqueID() == a_UniqueID)
-			{
-				a_Callback.Item(ent);
-				return true;
-			}
-		}  // for ent - m_EntitiesToAdd[]
-	}
-
 	// Then check the chunkmap:
 	return m_ChunkMap->DoWithEntityByID(a_UniqueID, a_Callback);
 }
@@ -3202,8 +3195,8 @@ void cWorld::ScheduleTask(int a_DelayTicks, cTaskPtr a_Task)
 
 void cWorld::AddEntity(cEntity * a_Entity)
 {
-	cCSLock Lock(m_CSEntitiesToAdd);
-	m_EntitiesToAdd.push_back(a_Entity);
+	a_Entity->SetWorld(this);
+	m_ChunkMap->AddEntity(a_Entity);
 }
 
 
@@ -3212,18 +3205,6 @@ void cWorld::AddEntity(cEntity * a_Entity)
 
 bool cWorld::HasEntity(UInt32 a_UniqueID)
 {
-	// Check if the entity is in the queue to be added to the world:
-	{
-		cCSLock Lock(m_CSEntitiesToAdd);
-		for (cEntityList::const_iterator itr = m_EntitiesToAdd.begin(), end = m_EntitiesToAdd.end(); itr != end; ++itr)
-		{
-			if ((*itr)->GetUniqueID() == a_UniqueID)
-			{
-				return true;
-			}
-		}  // for itr - m_EntitiesToAdd[]
-	}
-
 	// Check if the entity is in the chunkmap:
 	if (m_ChunkMap.get() == nullptr)
 	{
@@ -3414,24 +3395,25 @@ void cWorld::TabCompleteUserName(const AString & a_Text, AStringVector & a_Resul
 
 	std::vector<pair_t> UsernamesByWeight;
 
-	cCSLock Lock(m_CSPlayers);
-	for (cPlayerList::iterator itr = m_Players.begin(), end = m_Players.end(); itr != end; ++itr)
 	{
-		AString PlayerName ((*itr)->GetName());
-		if ((*itr)->HasCustomName())
+		std::lock_guard<std::recursive_mutex> Guard(m_Players.get_mutex());
+		for (const auto & Player : m_Players)
 		{
-			PlayerName = (*itr)->GetCustomName();
-		}
+			AString PlayerName(Player->GetName());
+			if (Player->HasCustomName())
+			{
+				PlayerName = Player->GetCustomName();
+			}
 
-		AString::size_type Found = PlayerName.find(LastWord);  // Try to find last word in playername
-		if (Found == AString::npos)
-		{
-			continue;  // No match
-		}
+			AString::size_type Found = PlayerName.find(LastWord);  // Try to find last word in playername
+			if (Found == AString::npos)
+			{
+				continue;  // No match
+			}
 
-		UsernamesByWeight.push_back(std::make_pair(Found, PlayerName));  // Match! Store it with the position of the match as a weight
+			UsernamesByWeight.push_back(std::make_pair(Found, PlayerName));  // Match! Store it with the position of the match as a weight
+		}
 	}
-	Lock.Unlock();
 
 	std::sort(UsernamesByWeight.begin(), UsernamesByWeight.end());  // Sort lexicographically (by the first value, then second), so higher weights (usernames with match closer to start) come first (#1274)
 
@@ -3557,64 +3539,6 @@ cFluidSimulator * cWorld::InitializeFluidSimulator(cIniFile & a_IniFile, const c
 	m_SimulatorManager->RegisterSimulator(res, Rate);
 
 	return res;
-}
-
-
-
-
-
-
-void cWorld::AddQueuedPlayers(void)
-{
-	ASSERT(m_TickThread.IsCurrentThread());
-
-	// Grab the list of players to add, it has to be locked to access it:
-	cPlayerList PlayersToAdd;
-	{
-		cCSLock Lock(m_CSPlayersToAdd);
-		std::swap(PlayersToAdd, m_PlayersToAdd);
-	}
-	
-	// Add all the players in the grabbed list:
-	{
-		cCSLock Lock(m_CSPlayers);
-		for (cPlayerList::iterator itr = PlayersToAdd.begin(), end = PlayersToAdd.end(); itr != end; ++itr)
-		{
-			ASSERT(std::find(m_Players.begin(), m_Players.end(), *itr) == m_Players.end());  // Is it already in the list? HOW?
-			LOGD("Adding player %s to world \"%s\".", (*itr)->GetName().c_str(), m_WorldName.c_str());
-
-			m_Players.push_back(*itr);
-			(*itr)->SetWorld(this);
-
-			// Add to chunkmap, if not already there (Spawn vs MoveToWorld):
-			m_ChunkMap->AddEntityIfNotPresent(*itr);
-		}  // for itr - PlayersToAdd[]
-	}  // Lock(m_CSPlayers)
-
-	// Add all the players' clienthandles:
-	{
-		cCSLock Lock(m_CSClients);
-		for (cPlayerList::iterator itr = PlayersToAdd.begin(), end = PlayersToAdd.end(); itr != end; ++itr)
-		{
-			cClientHandlePtr Client = (*itr)->GetClientHandlePtr();
-			if (Client != nullptr)
-			{
-				m_Clients.push_back(Client);
-			}
-		}  // for itr - PlayersToAdd[]
-	}  // Lock(m_CSClients)
-
-	// Stream chunks to all eligible clients:
-	for (cPlayerList::iterator itr = PlayersToAdd.begin(), end = PlayersToAdd.end(); itr != end; ++itr)
-	{
-		cClientHandle * Client = (*itr)->GetClientHandle();
-		if (Client != nullptr)
-		{
-			Client->SendPlayerMoveLook();
-			Client->SendHealth();
-			Client->SendWholeInventory(*(*itr)->GetWindow());
-		}
-	}  // for itr - PlayersToAdd[]
 }
 
 

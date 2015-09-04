@@ -328,9 +328,8 @@ public:
 
 	/** Removes the player from the world.
 	Removes the player from the addition queue, too, if appropriate.
-	If the player has a ClientHandle, the ClientHandle is removed from all chunks in the world and will not be ticked by this world anymore.
-	@param a_RemoveFromChunk determines if the entity should be removed from its chunk as well. Should be false when ticking from cChunk. */
-	void RemovePlayer(cPlayer * a_Player, bool a_RemoveFromChunk);
+	If the player has a ClientHandle, the ClientHandle is removed from all chunks in the world and will not be ticked by this world anymore. */
+	void RemovePlayer(cPlayer * a_Player);
 
 	/** Calls the callback for each player in the list; returns true if all players processed, false if the callback aborted by returning true */
 	virtual bool ForEachPlayer(cPlayerListCallback & a_Callback) override;  // >> EXPORTED IN MANUALBINDINGS <<
@@ -992,8 +991,7 @@ private:
 	std::unique_ptr<cFireSimulator>      m_FireSimulator;
 	cRedstoneSimulator * m_RedstoneSimulator;
 	
-	cCriticalSection m_CSPlayers;
-	cPlayerList      m_Players;
+	std::manual_lock_container<std::list<cPlayer *>> m_Players;
 
 	cWorldStorage     m_Storage;
 	
@@ -1081,18 +1079,6 @@ private:
 	
 	/** Clients that are scheduled for adding, waiting for TickClients to add them */
 	cClientHandlePtrs m_ClientsToAdd;
-
-	/** Guards m_EntitiesToAdd */
-	cCriticalSection m_CSEntitiesToAdd;
-
-	/** List of entities that are scheduled for adding, waiting for the Tick thread to add them. */
-	cEntityList m_EntitiesToAdd;
-
-	/** Guards m_PlayersToAdd */
-	cCriticalSection m_CSPlayersToAdd;
-
-	/** List of players that are scheduled for adding, waiting for the Tick thread to add them. */
-	cPlayerList m_PlayersToAdd;
 	
 	/** CS protecting m_SetChunkDataQueue. */
 	cCriticalSection m_CSSetChunkDataQueue;
@@ -1140,10 +1126,6 @@ private:
 
 	/** Creates a new redstone simulator. */
 	cRedstoneSimulator * InitializeRedstoneSimulator(cIniFile & a_IniFile);
-
-	/** Adds the players queued in the m_PlayersToAdd queue into the m_Players list.
-	Assumes it is called from the Tick thread. */
-	void AddQueuedPlayers(void);
 
 	/** Sets generator values to dimension specific defaults, if those values do not exist */
 	void InitialiseGeneratorDefaults(cIniFile & a_IniFile);

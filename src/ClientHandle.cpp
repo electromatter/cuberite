@@ -125,7 +125,7 @@ cClientHandle::~cClientHandle()
 				World->BroadcastPlayerListRemovePlayer(*m_Player, this);
 			}
 	
-			World->RemovePlayer(m_Player, true);  // Must be called before cPlayer::Destroy() as otherwise cChunk tries to delete the player, and then we do it again
+			World->RemovePlayer(m_Player);  // Must be called before cPlayer::Destroy() as otherwise cChunk tries to delete the player, and then we do it again
 			m_Player->Destroy();
 		}
 		delete m_Player;
@@ -2993,7 +2993,7 @@ void cClientHandle::SocketClosed(void)
 		cWorld * World = m_Player->GetWorld();
 		if (World != nullptr)
 		{
-			World->RemovePlayer(m_Player, true);  // Must be called before cPlayer::Destroy() as otherwise cChunk tries to delete the player, and then we do it again
+			World->RemovePlayer(m_Player);  // Must be called before cPlayer::Destroy() as otherwise cChunk tries to delete the player, and then we do it again
 		}
 	}
 	Destroy();

@@ -480,7 +480,7 @@ private:
 	
 	// A critical section is not needed, because all chunk access is protected by its parent ChunkMap's csLayers
 	cClientHandleList  m_LoadedByClient;
-	cEntityList        m_Entities;
+	std::manual_lock_container<std::list<cEntity *>> m_Entities;
 	cBlockEntityList   m_BlockEntities;
 	
 	/** Number of times the chunk has been requested to stay (by various cChunkStay objects); if zero, the chunk can be unloaded */

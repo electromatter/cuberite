@@ -448,6 +448,33 @@ namespace cpp14
 	}
 }
 
+namespace std
+{
+	template <typename ContainerType>
+	class manual_lock_container : public ContainerType
+	{
+	public:
+		using ContainerType::ContainerType;
+		manual_lock_container(const manual_lock_container<ContainerType> & a_Rhs) { this->operator=(a_Rhs); }
+		manual_lock_container() :
+			ContainerType(),
+			m_Mutex()
+		{
+		}
+
+		std::recursive_mutex & get_mutex(void) { return m_Mutex; }
+
+		inline manual_lock_container<ContainerType> & operator = (const manual_lock_container<ContainerType> & a_Rhs)
+		{
+			ContainerType::operator=(static_cast<ContainerType>(a_Rhs));
+			return *this;
+		}
+
+	private:
+		std::recursive_mutex m_Mutex;
+	};
+}
+
 // a tick is 50 ms
 using cTickTime = std::chrono::duration<int,  std::ratio_multiply<std::chrono::milliseconds::period, std::ratio<50>>>;
 using cTickTimeLong = std::chrono::duration<Int64,  cTickTime::period>;
