@@ -34,7 +34,7 @@ public:
 		// Generate:
 		cBFSPieceGenerator Gen(*this, 0);
 		cPlacedPieces OutPieces;
-		Gen.PlacePieces(500, 50, 500, 3, OutPieces);
+		Gen.PlacePieces(500, 500, 3, OutPieces);
 		
 		// Print out the pieces:
 		LOG("OutPieces.size() = " SIZE_T_FMT, OutPieces.size());
@@ -120,7 +120,7 @@ protected:
 		return m_Pieces;
 	}
 	
-	
+
 	virtual void PiecePlaced(const cPiece & a_Piece) override
 	{
 		UNUSED(a_Piece);
@@ -146,10 +146,143 @@ protected:
 
 
 
+/** A vertical strategy that places the piece in a random height between two heights. */
+class cVerticalStrategyRange:
+	public cPiece::cVerticalStrategy
+{
+public:
+	cVerticalStrategyRange(void):
+		m_Seed(0),
+		m_Min(-1),  // Default to "unassigned" height
+		m_Range(1)
+	{
+	}
+
+	virtual int GetVerticalPlacement(int a_BlockX, int a_BlockZ) override
+	{
+		cNoise Noise(m_Seed);
+		return m_Min + (Noise.IntNoise2DInt(a_BlockX, a_BlockZ) / 7) % m_Range;
+	}
+
+	virtual bool InitializeFromString(const AString & a_Params) override
+	{
+		auto Params = StringSplitAndTrim(a_Params, "|");
+		int Max = 0;
+		if (!StringToInteger(Params[0], m_Min) || !StringToInteger(Params[1], Max))
+		{
+			return false;
+		}
+		if (m_Min > Max)
+		{
+			std::swap(m_Min, Max);
+		}
+		m_Range = Max - m_Min + 1;
+		return true;
+	}
+
+	virtual void AssignGens(int a_Seed, cBiomeGenPtr & a_BiomeGen, cTerrainHeightGenPtr & a_TerrainHeightGen) override
+	{
+		m_Seed = a_Seed;
+	}
+
+protected:
+	/** Seed for the random generator. Received in AssignGens(). */
+	int m_Seed;
+
+	/** Range for the random generator. Received in InitializeFromString(). */
+	int m_Min, m_Range;
+};
+
+
+
+
+
+/** A vertical strategy that places the piece on top of the terrain. */
+class cVerticalStrategyTerrainTop:
+	public cPiece::cVerticalStrategy
+{
+public:
+
+	virtual int GetVerticalPlacement(int a_BlockX, int a_BlockZ) override
+	{
+		ASSERT(m_HeightGen != nullptr);
+
+		int ChunkX, ChunkZ;
+		cChunkDef::BlockToChunk(a_BlockX, a_BlockZ, ChunkX, ChunkZ);
+		cChunkDef::HeightMap HeightMap;
+		m_HeightGen->GenHeightMap(ChunkX, ChunkZ, HeightMap);
+		return cChunkDef::GetHeight(HeightMap, a_BlockX - ChunkX * cChunkDef::Width, a_BlockZ - ChunkZ * cChunkDef::Width) + 1;
+	}
+
+	virtual bool InitializeFromString(const AString & a_Params) override
+	{
+		return true;
+	}
+
+	virtual void AssignGens(int a_Seed, cBiomeGenPtr & a_BiomeGen, cTerrainHeightGenPtr & a_HeightGen) override
+	{
+		m_HeightGen = a_HeightGen;
+	}
+
+protected:
+	/** Height generator from which the top of the terrain is read. */
+	cTerrainHeightGenPtr m_HeightGen;
+};
+
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // cPiece:
 
-	
+bool cPiece::SetVerticalStrategyFromString(const AString & a_StrategyDesc)
+{
+	// Break apart the strategy class, the first parameter before the first pipe char:
+	auto idxPipe = a_StrategyDesc.find('|');
+	if (idxPipe == AString::npos)
+	{
+		idxPipe = a_StrategyDesc.length();
+	}
+	AString StrategyClass = a_StrategyDesc.substr(0, idxPipe);
+
+	// Create a strategy class based on the class string:
+	cVerticalStrategyPtr Strategy;
+	if (NoCaseCompare(StrategyClass, "Fixed") == 0)
+	{
+		Strategy = std::make_shared<cPiece::cVerticalStrategyFixed>();
+	}
+	else if (NoCaseCompare(StrategyClass, "Range") == 0)
+	{
+		Strategy = std::make_shared<cVerticalStrategyRange>();
+	}
+	else if (NoCaseCompare(StrategyClass, "TerrainTop") == 0)
+	{
+		Strategy = std::make_shared<cVerticalStrategyTerrainTop>();
+	}
+
+	// Initialize the strategy's parameters:
+	if (Strategy != nullptr)
+	{
+		AString Params;
+		if (idxPipe < a_StrategyDesc.length())
+		{
+			Params = a_StrategyDesc.substr(idxPipe + 1);
+		}
+		if (!Strategy->InitializeFromString(Params))
+		{
+			return false;
+		}
+	}
+
+	m_VerticalStrategy = Strategy;
+	return true;
+}
+
+
+
+
+
 Vector3i cPiece::RotatePos(const Vector3i & a_Pos, int a_NumCCWRotations) const
 {
 	Vector3i Size = GetSize();
@@ -361,10 +494,10 @@ void cPieceGenerator::FreePieces(cPlacedPieces & a_PlacedPieces)
 
 
 
-cPlacedPiece * cPieceGenerator::PlaceStartingPiece(int a_BlockX, int a_BlockY, int a_BlockZ, cFreeConnectors & a_OutConnectors)
+cPlacedPiece * cPieceGenerator::PlaceStartingPiece(int a_BlockX, int a_BlockZ, cFreeConnectors & a_OutConnectors)
 {
 	m_PiecePool.Reset();
-	int rnd = m_Noise.IntNoise3DInt(a_BlockX, a_BlockY, a_BlockZ) / 7;
+	int rnd = m_Noise.IntNoise2DInt(a_BlockX, a_BlockZ) / 7;
 	
 	// Choose a random one of the starting pieces:
 	cPieces StartingPieces = m_PiecePool.GetStartingPieces();
@@ -407,15 +540,16 @@ cPlacedPiece * cPieceGenerator::PlaceStartingPiece(int a_BlockX, int a_BlockY, i
 		}
 	}
 	int Rotation = Rotations[rnd % NumRotations];
-	
-	cPlacedPiece * res = new cPlacedPiece(nullptr, *StartingPiece, Vector3i(a_BlockX, a_BlockY, a_BlockZ), Rotation);
+	int BlockY = StartingPiece->GetStartingPieceHeight(a_BlockX, a_BlockZ);
+
+	cPlacedPiece * res = new cPlacedPiece(nullptr, *StartingPiece, Vector3i(a_BlockX, BlockY, a_BlockZ), Rotation);
 
 	// Place the piece's connectors into a_OutConnectors:
 	const cPiece::cConnectors & Conn = StartingPiece->GetConnectors();
 	for (cPiece::cConnectors::const_iterator itr = Conn.begin(), end = Conn.end(); itr != end; ++itr)
 	{
 		a_OutConnectors.push_back(
-			cFreeConnector(res, StartingPiece->RotateMoveConnector(*itr, Rotation, a_BlockX, a_BlockY, a_BlockZ))
+			cFreeConnector(res, StartingPiece->RotateMoveConnector(*itr, Rotation, a_BlockX, BlockY, a_BlockZ))
 		);
 	}
 
@@ -627,13 +761,13 @@ cBFSPieceGenerator::cBFSPieceGenerator(cPiecePool & a_PiecePool, int a_Seed) :
 
 
 
-void cBFSPieceGenerator::PlacePieces(int a_BlockX, int a_BlockY, int a_BlockZ, int a_MaxDepth, cPlacedPieces & a_OutPieces)
+void cBFSPieceGenerator::PlacePieces(int a_BlockX, int a_BlockZ, int a_MaxDepth, cPlacedPieces & a_OutPieces)
 {
 	a_OutPieces.clear();
 	cFreeConnectors ConnectorPool;
 	
 	// Place the starting piece:
-	a_OutPieces.push_back(PlaceStartingPiece(a_BlockX, a_BlockY, a_BlockZ, ConnectorPool));
+	a_OutPieces.push_back(PlaceStartingPiece(a_BlockX, a_BlockZ, ConnectorPool));
 	
 	/*
 	// DEBUG:

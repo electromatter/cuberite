@@ -18,6 +18,7 @@ Each uses a slightly different approach to generating:
 
 #pragma once
 
+#include "ComposableGenerator.h"
 #include "../Defines.h"
 #include "../Cuboid.h"
 #include "../Noise/Noise.h"
@@ -51,7 +52,65 @@ public:
 	};
 	
 	typedef std::vector<cConnector> cConnectors;
-	
+
+	/** Base class for strategies for placing the starting pieces vertically.
+	Descendants can override the GetVerticalPlacement() method to provide custom placement decisions. */
+	class cVerticalStrategy
+	{
+	public:
+		// Force a virtual destructor in descendants
+		virtual ~cVerticalStrategy() {}
+
+		/** Returns the Y coord of the piece */
+		virtual int GetVerticalPlacement(int a_BlockX, int a_BlockZ) = 0;
+
+		/** Initializes the strategy's parameters from the string representation.
+		Returns true if successful, false if the string parsing failed.
+		Used when loading the strategy from a file. */
+		virtual bool InitializeFromString(const AString & a_Params) = 0;
+
+		/** Called when the piece pool is assigned to a generator,
+		so that the strategies may bind to the underlying subgenerators. */
+		virtual void AssignGens(int a_Seed, cBiomeGenPtr & a_BiomeGen, cTerrainHeightGenPtr & a_TerrainHeightGen) {}
+	};
+
+	typedef SharedPtr<cVerticalStrategy> cVerticalStrategyPtr;
+
+
+	/** A vertical strategy that places the piece at a predefined height. */
+	class cVerticalStrategyFixed:
+		public cVerticalStrategy
+	{
+	public:
+		cVerticalStrategyFixed(void):
+			m_Height(-1)  // Default to "unassigned" height
+		{
+		}
+
+		cVerticalStrategyFixed(int a_Height):
+			m_Height(a_Height)
+		{
+		}
+
+		virtual int GetVerticalPlacement(int a_BlockX, int a_BlockZ) override
+		{
+			return m_Height;
+		}
+
+		virtual bool InitializeFromString(const AString & a_Params) override
+		{
+			return StringToInteger(a_Params, m_Height);
+		}
+
+	protected:
+		int m_Height;
+	};
+
+
+	/** The strategy used for vertical placement of this piece when it is used as a starting piece. */
+	cVerticalStrategyPtr m_VerticalStrategy;
+
+
 	/** Returns all of the available connectors that the piece has.
 	Each connector has a (relative) position in the piece, and a type associated with it. */
 	virtual cConnectors GetConnectors(void) const = 0;
@@ -66,7 +125,32 @@ public:
 	
 	/** Returns true if the piece can be rotated CCW the specific number of 90-degree turns. */
 	virtual bool CanRotateCCW(int a_NumRotations) const = 0;
+
+	/** Returns the height, based on m_VerticalStrategy, for this piece when used as the starting piece.
+	If there's no strategy assigned to this piece, returns -1. */
+	int GetStartingPieceHeight(int a_BlockX, int a_BlockZ)
+	{
+		if (m_VerticalStrategy != nullptr)
+		{
+			return m_VerticalStrategy->GetVerticalPlacement(a_BlockX, a_BlockZ);
+		}
+		return -1;
+	}
 	
+	void SetVerticalStrategy(cVerticalStrategyPtr a_VerticalStrategy)
+	{
+		m_VerticalStrategy = a_VerticalStrategy;
+	}
+
+	cVerticalStrategyPtr GetVerticalStrategy(void) const
+	{
+		return m_VerticalStrategy;
+	}
+
+	/** Sets the vertical strategy based on the description in the string.
+	Returns true if successful, false if strategy parsing failed (no strategy assigned). */
+	bool SetVerticalStrategyFromString(const AString & a_StrategyDesc);
+
 	/** Returns a copy of the a_Pos after rotating the piece the specified number of CCW rotations. */
 	Vector3i RotatePos(const Vector3i & a_Pos, int a_NumCCWRotations) const;
 
@@ -112,22 +196,24 @@ public:
 	/** Returns the relative weight with which the a_NewPiece is to be selected for placing under a_PlacedPiece through a_ExistingConnector.
 	a_ExistingConnector is the original connector, before any movement or rotation is applied to it.
 	This allows the pool to tweak the piece's chances, based on the previous pieces in the tree and the connector used.
-	The higher the number returned, the higher the chance the piece will be chosen. 0 means the piece will never be chosen.
-	*/
+	The higher the number returned, the higher the chance the piece will be chosen. 0 means the piece will never be chosen. */
 	virtual int GetPieceWeight(
 		const cPlacedPiece & a_PlacedPiece,
 		const cPiece::cConnector & a_ExistingConnector,
 		const cPiece & a_NewPiece
-	) { return 1; }
+	)
+	{
+		return 1;
+	}
 	
 	/** Returns the relative weight with which the a_NewPiece is to be selected for placing as the first piece.
 	This allows the pool to tweak the piece's chances.
 	The higher the number returned, the higher the chance the piece will be chosen. 0 means the piece will not be chosen.
-	If all pieces return 0, a random piece is chosen, with all equal chances.
-	*/
-	virtual int GetStartingPieceWeight(
-		const cPiece & a_NewPiece
-	) { return 1; }
+	If all pieces return 0, a random piece is chosen, with all equal chances. */
+	virtual int GetStartingPieceWeight(const cPiece & a_NewPiece)
+	{
+		return 1;
+	}
 
 	/** Called after a piece is placed, to notify the pool that it has been used.
 	The pool may adjust the pieces it will return the next time. */
@@ -229,9 +315,9 @@ protected:
 	int m_Seed;
 
 	
-	/** Selects a starting piece and places it, including the rotations.
+	/** Selects a starting piece and places it, including its height and rotation.
 	Also puts the piece's connectors in a_OutConnectors. */
-	cPlacedPiece * PlaceStartingPiece(int a_BlockX, int a_BlockY, int a_BlockZ, cFreeConnectors & a_OutConnectors);
+	cPlacedPiece * PlaceStartingPiece(int a_BlockX, int a_BlockZ, cFreeConnectors & a_OutConnectors);
 	
 	/** Tries to place a new piece at the specified (placed) connector. Returns true if successful. */
 	bool TryPlacePieceAtConnector(
@@ -269,13 +355,14 @@ class cBFSPieceGenerator :
 	public cPieceGenerator
 {
 	typedef cPieceGenerator super;
-	
+
 public:
 	cBFSPieceGenerator(cPiecePool & a_PiecePool, int a_Seed);
-	
+
 	/** Generates a placement for pieces at the specified coords.
-	Caller must free each individual cPlacedPiece in a_OutPieces. */
-	void PlacePieces(int a_BlockX, int a_BlockY, int a_BlockZ, int a_MaxDepth, cPlacedPieces & a_OutPieces);
+	The Y coord is generated automatically based on the starting piece that is chosen.
+	Caller must free each individual cPlacedPiece in a_OutPieces using cPieceGenerator::FreePieces(). */
+	void PlacePieces(int a_BlockX, int a_BlockZ, int a_MaxDepth, cPlacedPieces & a_OutPieces);
 };
 
 
@@ -289,8 +376,9 @@ public:
 	cDFSPieceGenerator(cPiecePool & a_PiecePool, int a_Seed);
 	
 	/** Generates a placement for pieces at the specified coords.
-	Caller must free each individual cPlacedPiece in a_OutPieces. */
-	void PlacePieces(int a_BlockX, int a_BlockY, int a_BlockZ, cPlacedPieces & a_OutPieces);
+	The Y coord is generated automatically based on the starting piece that is chosen.
+	Caller must free each individual cPlacedPiece in a_OutPieces using cPieceGenerator::FreePieces(). */
+	void PlacePieces(int a_BlockX, int a_BlockZ, cPlacedPieces & a_OutPieces);
 };
 
 

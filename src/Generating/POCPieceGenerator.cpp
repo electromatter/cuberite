@@ -15,7 +15,7 @@
 /** POC pieces are simple boxes that have connectors in the middle of their walls.
 Each wall has one connector, there are 3 connector types that get assigned semi-randomly.
 The piece also knows how to imprint itself in a cChunkDesc, each piece has a different color glass
-and each connector is uses a different color wool frame. */
+and each connector uses a different color wool frame. */
 class cPOCPiece :
 	public cPiece
 {
@@ -28,6 +28,7 @@ public:
 		m_Connectors.push_back(cConnector(m_SizeXZ / 2, a_Height / 2, m_SizeXZ - 1, 1,            BLOCK_FACE_ZP));
 		m_Connectors.push_back(cConnector(0,            a_Height / 2, m_SizeXZ / 2, 2,            BLOCK_FACE_XM));
 		m_Connectors.push_back(cConnector(m_SizeXZ - 1, a_Height - 1, m_SizeXZ / 2, m_SizeXZ % 3, BLOCK_FACE_XP));
+		SetVerticalStrategyFromString("Fixed|150");
 	}
 	
 	
@@ -164,7 +165,7 @@ cPOCPieceGenerator::cPOCPieceGenerator(int a_Seed) :
 	
 	// Generate the structure:
 	cBFSPieceGenerator Gen(*this, a_Seed);
-	Gen.PlacePieces(0, 50, 0, 6, m_Pieces);
+	Gen.PlacePieces(0, 0, 6, m_Pieces);
 	
 	// DebugPieces(m_Pieces);
 	
@@ -227,7 +228,7 @@ void cPOCPieceGenerator::GenFinish(cChunkDesc & a_ChunkDesc)
 			continue;
 		}
 			
-		(static_cast<const cPOCPiece &>((*itr)->GetPiece())).ImprintInChunk(a_ChunkDesc, Pos, (*itr)->GetNumCCWRotations());
+		(reinterpret_cast<const cPOCPiece &>((*itr)->GetPiece())).ImprintInChunk(a_ChunkDesc, Pos, (*itr)->GetNumCCWRotations());
 	}  // for itr - m_Pieces[]
 	a_ChunkDesc.UpdateHeightmap();
 }

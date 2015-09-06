@@ -312,6 +312,7 @@ Cubeset =
 				["ShouldExpandFloor"] = "1",
 				["MoveToGround"] = "1",
 				["AddWeightIfSame"] = "0",
+				["VerticalStrategy"] = "TerrainTop",
 			},
 			BlockDefinitions =
 			{
@@ -4342,6 +4343,7 @@ Cubeset =
 				["ShouldExpandFloor"] = "1",
 				["MoveToGround"] = "1",
 				["AddWeightIfSame"] = "0",
+				["VerticalStrategy"] = "TerrainTop",
 			},
 			BlockDefinitions =
 			{
@@ -4578,6 +4580,7 @@ Cubeset =
 				["ShouldExpandFloor"] = "0",
 				["MoveToGround"] = "1",
 				["AddWeightIfSame"] = "0",
+				["VerticalStrategy"] = "TerrainTop",
 			},
 			BlockDefinitions =
 			{

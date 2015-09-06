@@ -12,7 +12,7 @@
 
 
 
-static cPrefabPiecePool g_RainbowRoads(g_RainbowRoadPrefabs, g_RainbowRoadPrefabsCount, g_RainbowRoadStartingPrefabs, g_RainbowRoadStartingPrefabsCount);
+static cPrefabPiecePool g_RainbowRoads(g_RainbowRoadPrefabs, g_RainbowRoadPrefabsCount, g_RainbowRoadStartingPrefabs, g_RainbowRoadStartingPrefabsCount, 190);
 
 
 
@@ -42,7 +42,7 @@ public:
 	{
 		// Generate the pieces for this base:
 		cBFSPieceGenerator pg(g_RainbowRoads, a_Seed);
-		pg.PlacePieces(a_OriginX, 190, a_OriginZ, a_MaxDepth, m_Pieces);
+		pg.PlacePieces(a_OriginX, a_OriginZ, a_MaxDepth, m_Pieces);
 		if (m_Pieces.empty())
 		{
 			return;

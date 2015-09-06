@@ -35,6 +35,7 @@
 #include "TestRailsGen.h"
 #include "UnderwaterBaseGen.h"
 #include "VillageGen.h"
+#include "PieceStructuresGen.h"
 
 
 
@@ -364,6 +365,20 @@ void cComposableGenerator::InitFinishGens(cIniFile & a_IniFile)
 		{
 			m_FinishGens.push_back(cFinishGenPtr(new cFinishGenFluidSprings(Seed, E_BLOCK_LAVA, a_IniFile, Dimension)));
 		}
+		else if (NoCaseCompare(*itr, "Lilypads") == 0)
+		{
+			// A list with all the allowed biomes.
+			cFinishGenSingleTopBlock::BiomeList AllowedBiomes;
+			AllowedBiomes.push_back(biSwampland);
+			AllowedBiomes.push_back(biSwamplandM);
+
+			// A list with all the allowed blocks that can be below the lilypad.
+			cFinishGenSingleTopBlock::BlockList AllowedBlocks;
+			AllowedBlocks.push_back(E_BLOCK_WATER);
+			AllowedBlocks.push_back(E_BLOCK_STATIONARY_WATER);
+
+			m_FinishGens.push_back(cFinishGenPtr(new cFinishGenSingleTopBlock(Seed, E_BLOCK_LILY_PAD, AllowedBiomes, 4, AllowedBlocks)));
+		}
 		else if (NoCaseCompare(*itr, "MarbleCaves") == 0)
 		{
 			m_FinishGens.push_back(cFinishGenPtr(new cStructGenMarbleCaves(Seed)));
@@ -380,20 +395,6 @@ void cComposableGenerator::InitFinishGens(cIniFile & a_IniFile)
 				Seed, GridSize, MaxOffset, MaxSystemSize,
 				ChanceCorridor, ChanceCrossing, ChanceStaircase
 			)));
-		}
-		else if (NoCaseCompare(*itr, "Lilypads") == 0)
-		{
-			// A list with all the allowed biomes.
-			cFinishGenSingleTopBlock::BiomeList AllowedBiomes;
-			AllowedBiomes.push_back(biSwampland);
-			AllowedBiomes.push_back(biSwamplandM);
-
-			// A list with all the allowed blocks that can be below the lilypad.
-			cFinishGenSingleTopBlock::BlockList AllowedBlocks;
-			AllowedBlocks.push_back(E_BLOCK_WATER);
-			AllowedBlocks.push_back(E_BLOCK_STATIONARY_WATER);
-
-			m_FinishGens.push_back(cFinishGenPtr(new cFinishGenSingleTopBlock(Seed, E_BLOCK_LILY_PAD, AllowedBiomes, 4, AllowedBlocks)));
 		}
 		else if (NoCaseCompare(*itr, "NaturalPatches") == 0)
 		{
@@ -523,6 +524,12 @@ void cComposableGenerator::InitFinishGens(cIniFile & a_IniFile)
 			Ores.push_back(DiamondVein);
 
 			m_FinishGens.push_back(cFinishGenPtr(new cStructGenOreNests(Seed, Ores, E_BLOCK_STONE)));
+		}
+		else if (NoCaseCompare(*itr, "PieceStructures") == 0)
+		{
+			auto gen = std::make_shared<cPieceStructuresGen>(Seed);
+			gen->Initialize(a_IniFile, m_BiomeGen, m_CompositedHeightCache);
+			m_FinishGens.push_back(gen);
 		}
 		else if (NoCaseCompare(*itr, "POCPieces") == 0)
 		{

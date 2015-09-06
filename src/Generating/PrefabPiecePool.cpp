@@ -60,13 +60,14 @@ cPrefabPiecePool::cPrefabPiecePool(void)
 
 cPrefabPiecePool::cPrefabPiecePool(
 	const cPrefab::sDef * a_PieceDefs,         size_t a_NumPieceDefs,
-	const cPrefab::sDef * a_StartingPieceDefs, size_t a_NumStartingPieceDefs
+	const cPrefab::sDef * a_StartingPieceDefs, size_t a_NumStartingPieceDefs,
+	int a_DefaultStartingPieceHeight
 )
 {
 	AddPieceDefs(a_PieceDefs, a_NumPieceDefs);
 	if (a_StartingPieceDefs != nullptr)
 	{
-		AddStartingPieceDefs(a_StartingPieceDefs, a_NumStartingPieceDefs);
+		AddStartingPieceDefs(a_StartingPieceDefs, a_NumStartingPieceDefs, a_DefaultStartingPieceHeight);
 	}
 }
 
@@ -126,12 +127,21 @@ void cPrefabPiecePool::AddPieceDefs(const cPrefab::sDef * a_PieceDefs, size_t a_
 
 
 
-void cPrefabPiecePool::AddStartingPieceDefs(const cPrefab::sDef * a_StartingPieceDefs, size_t a_NumStartingPieceDefs)
+void cPrefabPiecePool::AddStartingPieceDefs(
+	const cPrefab::sDef * a_StartingPieceDefs,
+	size_t a_NumStartingPieceDefs,
+	int a_DefaultPieceHeight
+)
 {
 	ASSERT(a_StartingPieceDefs != nullptr);
+	auto verticalStrategy = std::make_shared<cPiece::cVerticalStrategyFixed>(a_DefaultPieceHeight);
 	for (size_t i = 0; i < a_NumStartingPieceDefs; i++)
 	{
 		cPrefab * Prefab = new cPrefab(a_StartingPieceDefs[i]);
+		if (a_DefaultPieceHeight >= 0)
+		{
+			Prefab->SetVerticalStrategy(verticalStrategy);
+		}
 		m_StartingPieces.push_back(Prefab);
 	}
 }
@@ -215,13 +225,12 @@ void cPrefabPiecePool::AddToPerConnectorMap(cPrefab * a_Prefab)
 
 bool cPrefabPiecePool::LoadFromCubesetFileVer1(const AString & a_FileName, cLuaState & a_LuaState, bool a_LogWarnings)
 {
-	// Load the metadata:
-	ApplyPoolMetadataCubesetVer1(a_FileName, a_LuaState, a_LogWarnings);
+	// Load the metadata and the generator params:
+	ReadPoolMetadataCubesetVer1(a_FileName, a_LuaState, a_LogWarnings);
+	ReadPoolGeneratorParamsCubesetVer1(a_FileName, a_LuaState, a_LogWarnings);
 
 	// Push the Cubeset.Pieces global value on the stack:
-	lua_getglobal(a_LuaState, "_G");
-	cLuaState::cStackValue stk(a_LuaState);
-	auto pieces = a_LuaState.WalkToValue("Cubeset.Pieces");
+	auto pieces = a_LuaState.WalkToNamedGlobal("Cubeset.Pieces");
 	if (!pieces.IsValid() || !lua_istable(a_LuaState, -1))
 	{
 		CONDWARNING(a_LogWarnings, "The cubeset file %s doesn't contain any pieces", a_FileName.c_str());
@@ -299,15 +308,27 @@ bool cPrefabPiecePool::LoadCubesetPieceVer1(const AString & a_FileName, cLuaStat
 	a_LuaState.GetNamedValue("Metadata.AllowedRotations", AllowedRotations);
 	prefab->SetAllowedRotations(AllowedRotations);
 
-	// Apply the relevant metadata:
-	if (!ApplyPieceMetadataCubesetVer1(a_FileName, a_LuaState, PieceName, prefab.get(), a_LogWarnings))
+	// Read the relevant metadata for the piece:
+	if (!ReadPieceMetadataCubesetVer1(a_FileName, a_LuaState, PieceName, prefab.get(), a_LogWarnings))
 	{
 		return false;
 	}
 
-	// Add the prefab into the list of pieces:
+	// If the piece is a starting piece, check that it has a vertical strategy:
 	int IsStartingPiece = 0;
 	a_LuaState.GetNamedValue("Metadata.IsStarting", IsStartingPiece);
+	if (IsStartingPiece != 0)
+	{
+		if (prefab->GetVerticalStrategy() == nullptr)
+		{
+			CONDWARNING(a_LogWarnings, "Prefab %s in file %s doesn't have its VerticalStrategy set. Setting to Fixed|150.",
+				PieceName.c_str(), a_FileName.c_str()
+			);
+			prefab->SetVerticalStrategyFromString("Fixed|150");
+		}
+	}
+
+	// Add the prefab into the list of pieces:
 	if (IsStartingPiece != 0)
 	{
 		m_StartingPieces.push_back(prefab.release());
@@ -318,6 +339,7 @@ bool cPrefabPiecePool::LoadCubesetPieceVer1(const AString & a_FileName, cLuaStat
 		m_AllPieces.push_back(p);
 		AddToPerConnectorMap(p);
 	}
+
 	return true;
 }
 
@@ -464,7 +486,7 @@ bool cPrefabPiecePool::ReadConnectorsCubesetVer1(
 
 
 
-bool cPrefabPiecePool::ApplyPieceMetadataCubesetVer1(
+bool cPrefabPiecePool::ReadPieceMetadataCubesetVer1(
 	const AString & a_FileName,
 	cLuaState & a_LuaState,
 	const AString & a_PieceName,
@@ -481,13 +503,14 @@ bool cPrefabPiecePool::ApplyPieceMetadataCubesetVer1(
 
 	// Get the values:
 	int AddWeightIfSame = 0, DefaultWeight = 100, MoveToGround = 0, ShouldExpandFloor = 0;
-	AString DepthWeight, MergeStrategy;
+	AString DepthWeight, MergeStrategy, VerticalStrategy;
 	a_LuaState.GetNamedValue("AddWeightIfSame",   AddWeightIfSame);
 	a_LuaState.GetNamedValue("DefaultWeight",     DefaultWeight);
 	a_LuaState.GetNamedValue("DepthWeight",       DepthWeight);
 	a_LuaState.GetNamedValue("MergeStrategy",     MergeStrategy);
 	a_LuaState.GetNamedValue("MoveToGround",      MoveToGround);
 	a_LuaState.GetNamedValue("ShouldExpandFloor", ShouldExpandFloor);
+	a_LuaState.GetNamedValue("VerticalStrategy",  VerticalStrategy);
 
 	// Apply the values:
 	a_Prefab->SetAddWeightIfSame(AddWeightIfSame);
@@ -508,6 +531,7 @@ bool cPrefabPiecePool::ApplyPieceMetadataCubesetVer1(
 	}
 	a_Prefab->SetMoveToGround(MoveToGround != 0);
 	a_Prefab->SetExtendFloor(ShouldExpandFloor != 0);
+	a_Prefab->SetVerticalStrategyFromString(VerticalStrategy);
 
 	return true;
 }
@@ -516,7 +540,7 @@ bool cPrefabPiecePool::ApplyPieceMetadataCubesetVer1(
 
 
 
-bool cPrefabPiecePool::ApplyPoolMetadataCubesetVer1(
+bool cPrefabPiecePool::ReadPoolMetadataCubesetVer1(
 	const AString & a_FileName,
 	cLuaState & a_LuaState,
 	bool a_LogWarnings
@@ -576,7 +600,69 @@ bool cPrefabPiecePool::ApplyPoolMetadataCubesetVer1(
 			m_AllowedBiomes.insert(static_cast<EMCSBiome>(b));
 		}
 	}
+
 	return true;
+}
+
+
+
+
+
+bool cPrefabPiecePool::ReadPoolGeneratorParamsCubesetVer1(
+	const AString & a_FileName,
+	cLuaState & a_LuaState,
+	bool a_LogWarnings
+)
+{
+	// Push the Cubeset.Metadata table on top of the Lua stack:
+	auto gp = a_LuaState.WalkToNamedGlobal("Cubeset.GeneratorParams");
+	if (!gp.IsValid())
+	{
+		return true;
+	}
+
+	// Iterate over elements in the table, put them into the m_GeneratorParams map:
+	lua_pushnil(a_LuaState);  // Table is at index -2, starting key (nil) at index -1
+	while (lua_next(a_LuaState, -2) != 0)
+	{
+		// Table at index -3, key at index -2, value at index -1
+		AString key, val;
+		a_LuaState.GetStackValues(-2, key, val);
+		m_GeneratorParams[key] = val;
+		lua_pop(a_LuaState, 1);  // Table at index -2, key at index -1
+	}
+	return true;
+}
+
+
+
+
+
+AString cPrefabPiecePool::GetGeneratorParam(const AString & a_ParamName) const
+{
+	auto itr = m_GeneratorParams.find(a_ParamName);
+	if (itr == m_GeneratorParams.end())
+	{
+		return "";
+	}
+	return itr->second;
+}
+
+
+
+
+
+void cPrefabPiecePool::AssignGens(int a_Seed, cBiomeGenPtr & a_BiomeGen, cTerrainHeightGenPtr & a_HeightGen)
+{
+	// Assign the generator linkage to all starting pieces:
+	for (auto & piece: m_StartingPieces)
+	{
+		auto & verticalStrategy = piece->GetVerticalStrategy();
+		if (verticalStrategy != nullptr)
+		{
+			verticalStrategy->AssignGens(a_Seed, a_BiomeGen, a_HeightGen);
+		}
+	}
 }
 
 
@@ -610,7 +696,7 @@ cPieces cPrefabPiecePool::GetStartingPieces(void)
 
 int cPrefabPiecePool::GetPieceWeight(const cPlacedPiece & a_PlacedPiece, const cPiece::cConnector & a_ExistingConnector, const cPiece & a_NewPiece)
 {
-	return (static_cast<const cPrefab &>(a_NewPiece)).GetPieceWeight(a_PlacedPiece, a_ExistingConnector);
+	return (reinterpret_cast<const cPrefab &>(a_NewPiece)).GetPieceWeight(a_PlacedPiece, a_ExistingConnector);
 }
 
 
@@ -619,7 +705,7 @@ int cPrefabPiecePool::GetPieceWeight(const cPlacedPiece & a_PlacedPiece, const c
 
 int cPrefabPiecePool::GetStartingPieceWeight(const cPiece & a_NewPiece)
 {
-	return (static_cast<const cPrefab &>(a_NewPiece)).GetDefaultWeight();
+	return (reinterpret_cast<const cPrefab &>(a_NewPiece)).GetDefaultWeight();
 }
 
 

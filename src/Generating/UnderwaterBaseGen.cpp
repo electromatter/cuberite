@@ -12,7 +12,7 @@
 
 
 
-static cPrefabPiecePool g_UnderwaterBase(g_UnderwaterBasePrefabs, g_UnderwaterBasePrefabsCount, g_UnderwaterBaseStartingPrefabs, g_UnderwaterBaseStartingPrefabsCount);
+static cPrefabPiecePool g_UnderwaterBase(g_UnderwaterBasePrefabs, g_UnderwaterBasePrefabsCount, g_UnderwaterBaseStartingPrefabs, g_UnderwaterBaseStartingPrefabsCount, 50);
 
 
 
@@ -42,7 +42,7 @@ public:
 	{
 		// Generate the pieces for this base:
 		cBFSPieceGenerator pg(g_UnderwaterBase, a_Seed);
-		pg.PlacePieces(a_OriginX, 50, a_OriginZ, a_MaxDepth, m_Pieces);
+		pg.PlacePieces(a_OriginX, a_OriginZ, a_MaxDepth, m_Pieces);
 		if (m_Pieces.empty())
 		{
 			return;

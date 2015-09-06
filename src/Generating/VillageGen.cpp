@@ -134,7 +134,7 @@ public:
 	{
 		// Generate the pieces for this village; don't care about the Y coord:
 		cBFSPieceGenerator pg(*this, a_Seed);
-		pg.PlacePieces(a_OriginX, 0, a_OriginZ, a_MaxRoadDepth + 1, m_Pieces);
+		pg.PlacePieces(a_OriginX, a_OriginZ, a_MaxRoadDepth + 1, m_Pieces);
 		if (m_Pieces.empty())
 		{
 			return;
@@ -206,8 +206,8 @@ protected:
 			Prefab.Draw(a_Chunk, *itr);
 		}  // for itr - m_PlacedPieces[]
 	}
-	
-	
+
+
 	/**  Adjusts the Y coord of the given piece so that the piece is on the ground.
 	Ground level is assumed to be represented by the first connector in the piece. */
 	void PlacePieceOnGround(cPlacedPiece & a_Piece)

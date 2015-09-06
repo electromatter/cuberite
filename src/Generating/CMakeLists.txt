@@ -23,8 +23,10 @@ SET (SRCS
 	Noise3DGenerator.cpp
 	POCPieceGenerator.cpp
 	PieceGenerator.cpp
+	PieceStructuresGen.cpp
 	Prefab.cpp
 	PrefabPiecePool.cpp
+	PrefabStructure.cpp
 	RainbowRoadsGen.cpp
 	Ravines.cpp
 	RoughRavines.cpp
@@ -57,8 +59,10 @@ SET (HDRS
 	Noise3DGenerator.h
 	POCPieceGenerator.h
 	PieceGenerator.h
+	PieceStructuresGen.h
 	Prefab.h
 	PrefabPiecePool.h
+	PrefabStructure.h
 	ProtIntGen.h
 	RainbowRoadsGen.h
 	Ravines.h

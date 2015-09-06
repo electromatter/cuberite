@@ -287,10 +287,16 @@ public:
 	}
 
 	/** Pushes the named value in the table at the top of the stack.
-	a_Name may be a path containing multiple table levels, such as "_G.cChatColor.Blue".
+	a_Name may be a path containing multiple table levels, such as "cChatColor.Blue".
 	If the value is found, it is pushed on top of the stack and the returned cStackValue is valid.
 	If the value is not found, the stack is unchanged and the returned cStackValue is invalid. */
 	cStackValue WalkToValue(const AString & a_Name);
+
+	/** Pushes the named value in the global table to the top of the stack.
+	a_Name may be a path containing multiple table levels, such as "cChatColor.Blue".
+	If the value is found in the global table, it is pushed to the top of the stack and the returned cStackValue is valid.
+	If the value is not found, the stack is unchanged and the returned cStackValue is invalid. */
+	cStackValue WalkToNamedGlobal(const AString & a_Name);
 
 	/** Retrieves the named value in the table at the top of the Lua stack.
 	a_Name may be a path containing multiple table levels, such as "_G.cChatColor.Blue".

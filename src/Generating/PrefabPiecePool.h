@@ -36,10 +36,13 @@ public:
 	pieces for the pool, and they do not participate in the generation any further.
 	If only a_PieceDefs is given, any such piece can be chosen as a starting piece, and all the pieces are used
 	for generating.
-	More pieces can be added to the instance afterwards by calling AddPieceDefs() and AddStartingPieceDefs(). */
+	More pieces can be added to the instance afterwards by calling AddPieceDefs() and AddStartingPieceDefs().
+	If a_DefaultStartingPieceHeight is non-negative, it is applied to each starting piece as its fixed
+	height (for the GetStartingPieceHeight() call). */
 	cPrefabPiecePool(
 		const cPrefab::sDef * a_PieceDefs,         size_t a_NumPieceDefs,
-		const cPrefab::sDef * a_StartingPieceDefs, size_t a_NumStartingPieceDefs
+		const cPrefab::sDef * a_StartingPieceDefs, size_t a_NumStartingPieceDefs,
+		int a_DefaultStartingPieceHeight = -1
 	);
 	
 	/** Creates a pool and loads the contents of the specified file into it.
@@ -59,8 +62,14 @@ public:
 	
 	/** Adds pieces from the specified definitions into m_StartingPieces. Doesn't add them to
 	the m_PiecesByConnector map.
-	May be called multiple times with different PieceDefs, will add all such pieces. */
-	void AddStartingPieceDefs(const cPrefab::sDef * a_StartingPieceDefs, size_t a_NumStartingPieceDefs);
+	May be called multiple times with different PieceDefs, will add all such pieces.
+	If a_DefaultPieceHeight is non-negative, it is applied to each piece as its fixed
+	height (for the GetStartingPieceHeight() call). */
+	void AddStartingPieceDefs(
+		const cPrefab::sDef * a_StartingPieceDefs,
+		size_t a_NumStartingPieceDefs,
+		int a_DefaultPieceHeight = -1
+	);
 	
 	/** Loads the pieces from the specified file. Returns true if successful, false on error.
 	If a_LogWarnings is true, logs a warning to console when loading fails. */
@@ -88,6 +97,14 @@ public:
 	/** Returns true if a_Biome is among the accepted biomes in the m_AcceptedBiomes metadata member. */
 	bool IsBiomeAllowed(EMCSBiome a_Biome) const { return (m_AllowedBiomes.find(a_Biome) != m_AllowedBiomes.end()); }
 
+	AString GetGeneratorParam(const AString & a_ParamName) const;
+
+	const AStringMap & GetGeneratorParams(void) const { return m_GeneratorParams; }
+
+	/** Called when the piece pool is assigned to a generator,
+	so that the individual starting pieces' vertical strategies may bind to the underlying subgenerators. */
+	void AssignGens(int a_Seed, cBiomeGenPtr & a_BiomeGen, cTerrainHeightGenPtr & a_HeightGen);
+
 	// cPiecePool overrides:
 	virtual cPieces GetPiecesWithConnector(int a_ConnectorType) override;
 	virtual cPieces GetStartingPieces(void) override;
@@ -100,7 +117,8 @@ protected:
 
 	/** The type used to map a connector type to the list of pieces with that connector */
 	typedef std::map<int, cPieces> cPiecesMap;
-	
+
+
 	/** All the pieces that are allowed for building.
 	This is the list that's used for memory allocation and deallocation for the pieces. */
 	cPieces m_AllPieces;
@@ -136,6 +154,9 @@ protected:
 
 	/** A set of allowed  biomes for the pool. The pool will only be used within the specified biomes. */
 	std::unordered_set<EMCSBiome, BiomeHasher> m_AllowedBiomes;
+
+	/** A dictionary of generator parameters. */
+	AStringMap m_GeneratorParams;
 
 
 	/** Adds the prefab to the m_PiecesByConnector map for all its connectors. */
@@ -187,7 +208,7 @@ protected:
 	The metadata is applied into the a_Prefab object.
 	a_PieceName is the identification of the piece, used for logging only.
 	If a_LogWarnings is true, logs a warning to console when loading fails. */
-	bool ApplyPieceMetadataCubesetVer1(
+	bool ReadPieceMetadataCubesetVer1(
 		const AString & a_FileName,
 		cLuaState & a_LuaState,
 		const AString & a_PieceName,
@@ -199,7 +220,18 @@ protected:
 	Returns true on success, false on failure.
 	The metadata is applied into "this".
 	If a_LogWarnings is true, logs a warning to console when loading fails. */
-	bool ApplyPoolMetadataCubesetVer1(
+	bool ReadPoolMetadataCubesetVer1(
+		const AString & a_FileName,
+		cLuaState & a_LuaState,
+		bool a_LogWarnings
+	);
+
+	/** Reads the generator parameters from the cubeset file parsed into the specified Lua state.
+	Assumes that the "Cubeset.Metadata" table is already pushed on top of the Lua stack.
+	Returns true on success, false on failure.
+	The generator parameters are read into the m_GeneratorParams map.
+	If a_LogWarnings is true, logs a warning to console when loading fails. */
+	bool ReadPoolGeneratorParamsCubesetVer1(
 		const AString & a_FileName,
 		cLuaState & a_LuaState,
 		bool a_LogWarnings

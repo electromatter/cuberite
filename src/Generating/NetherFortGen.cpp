@@ -32,14 +32,11 @@ public:
 		m_GridSize(a_GridSize),
 		m_Seed(a_Seed)
 	{
-		// TODO: Proper Y-coord placement
-		int BlockY = 64;
-		
 		// Generate pieces:
 		for (int i = 0; m_Pieces.size() < static_cast<size_t>(a_MaxDepth * a_MaxDepth / 8 + a_MaxDepth); i++)
 		{
 			cBFSPieceGenerator pg(cNetherFortGen::m_PiecePool, a_Seed + i);
-			pg.PlacePieces(a_OriginX, BlockY, a_OriginZ, a_MaxDepth, m_Pieces);
+			pg.PlacePieces(a_OriginX, a_OriginZ, a_MaxDepth, m_Pieces);
 		}
 	}
 
@@ -102,7 +99,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // cNetherFortGen:
 
-cPrefabPiecePool cNetherFortGen::m_PiecePool(g_NetherFortPrefabs, g_NetherFortPrefabsCount, g_NetherFortStartingPrefabs, g_NetherFortStartingPrefabsCount);
+cPrefabPiecePool cNetherFortGen::m_PiecePool(g_NetherFortPrefabs, g_NetherFortPrefabsCount, g_NetherFortStartingPrefabs, g_NetherFortStartingPrefabsCount, 64);
 
 
 
@@ -116,7 +113,7 @@ cNetherFortGen::cNetherFortGen(int a_Seed, int a_GridSize, int a_MaxOffset, int 
 	// DEBUG: Try one round of placement:
 	cPlacedPieces Pieces;
 	cBFSPieceGenerator pg(m_PiecePool, a_Seed);
-	pg.PlacePieces(0, 64, 0, a_MaxDepth, Pieces);
+	pg.PlacePieces(0, 0, a_MaxDepth, Pieces);
 	//*/
 }
 

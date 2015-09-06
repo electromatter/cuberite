@@ -12,7 +12,7 @@
 
 
 
-static cPrefabPiecePool g_TestRails(g_TestRailsPrefabs, g_TestRailsPrefabsCount, g_TestRailsStartingPrefabs, g_TestRailsStartingPrefabsCount);
+static cPrefabPiecePool g_TestRails(g_TestRailsPrefabs, g_TestRailsPrefabsCount, g_TestRailsStartingPrefabs, g_TestRailsStartingPrefabsCount, 150);
 
 
 
@@ -42,7 +42,7 @@ public:
 	{
 		// Generate the pieces for this test:
 		cBFSPieceGenerator pg(g_TestRails, a_Seed);
-		pg.PlacePieces(a_OriginX, 150, a_OriginZ, a_MaxDepth, m_Pieces);
+		pg.PlacePieces(a_OriginX, a_OriginZ, a_MaxDepth, m_Pieces);
 		if (m_Pieces.empty())
 		{
 			return;

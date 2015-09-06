@@ -868,7 +868,44 @@ cLuaState::cStackValue cLuaState::WalkToValue(const AString & a_Name)
 		// Remove the previous value from the stack (keep only the new one):
 		lua_remove(m_LuaState, -2);
 	}  // for elem - path[]
+	if (lua_isnil(m_LuaState, -1))
+	{
+		lua_pop(m_LuaState, 1);
+		return cStackValue();
+	}
 	return cStackValue(*this);
+}
+
+
+
+
+
+cLuaState::cStackValue cLuaState::WalkToNamedGlobal(const AString & a_Name)
+{
+	// Iterate over path and replace the top of the stack with the walked element
+	lua_getglobal(m_LuaState, "_G");
+	auto path = StringSplit(a_Name, ".");
+	for (const auto & elem: path)
+	{
+		// If the value is not a table, bail out (error):
+		if (!lua_istable(m_LuaState, -1))
+		{
+			lua_pop(m_LuaState, 1);
+			return cStackValue();
+		}
+
+		// Get the next part of the path:
+		lua_getfield(m_LuaState, -1, elem.c_str());
+
+		// Remove the previous value from the stack (keep only the new one):
+		lua_remove(m_LuaState, -2);
+	}  // for elem - path[]
+	if (lua_isnil(m_LuaState, -1))
+	{
+		lua_pop(m_LuaState, 1);
+		return cStackValue();
+	}
+	return std::move(cStackValue(*this));
 }
 
 
